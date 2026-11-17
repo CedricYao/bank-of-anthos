@@ -46,11 +46,14 @@ export CENTRAL_PROJECT_ID="my-central-observability-project"
 
 | Variable | Default | Description |
 |---|---|---|
+| `EXTRA_PROJECT_IDS` | _(unset)_ | Space-separated additional source projects, for example a separate Cloud SQL project. Each gets its own sink and is added to the metrics and trace scopes. |
 | `LOG_BUCKET` | `central-logs` | Destination log bucket in the central project. |
 | `LOG_BUCKET_LOCATION` | `global` | Region of the log bucket. |
 | `LOG_RETENTION_DAYS` | `30` | How long the bucket keeps logs. |
-| `SINK_NAME` | `boa-to-central` | Name of the log sink in the app project. |
-| `EXCLUDE_FROM_SOURCE` | `false` | If `true`, the app project's `_Default` bucket stops storing the routed logs, so you don't pay to store them twice. |
+| `SINK_NAME` | `boa-to-central` | Name of the log sink in each source project. |
+| `TRACE_SCOPE` | `boa-central` | ID of the trace scope created in the central project. |
+| `EXCLUDE_FROM_SOURCE` | `false` | If `true`, the source projects' `_Default` buckets stop storing the routed logs, so you don't pay to store them twice. |
+| `EXCLUSION_NAME` | `boa-routed-to-central` | Name of that exclusion. |
 | `WORKLOAD_GSA` | _(unset)_ | The Google service account your Bank of Anthos pods use through Workload Identity, for example `boa-gsa@${PROJECT_ID}.iam.gserviceaccount.com`. If set, it is granted `roles/cloudtrace.agent` and `roles/monitoring.metricWriter`. |
 
 3. **Run the script.** You can safely run it again: it creates missing resources and updates existing ones.
@@ -82,7 +85,12 @@ If the role is missing, the services keep running but log permission errors when
 
 ## Cleanup
 
-1. In the central project's [Trace Explorer](https://console.cloud.google.com/traces/explorer), change the default trace scope away from `boa-central`. A trace scope can't be deleted while it is the default.
+1. Point the central project back at its built-in trace scope. A trace scope can't be deleted while it is the default.
+
+```
+gcloud observability scopes update _Default --location=global --project=$CENTRAL_PROJECT_ID \
+  --trace-scope=projects/$CENTRAL_PROJECT_ID/locations/global/traceScopes/_Default
+```
 
 2. Remove the remaining resources:
 
